@@ -86,22 +86,18 @@ function closePlayer(): void {
 // Swipe-down-to-close on the handle + scroll detection
 function initSheetGesture(): void {
     let startY = 0;
-    let startScrollTop = 0;
     let dragging = false;
     let currentDY = 0;
 
     function onStart(y: number): void {
         startY = y;
-        startScrollTop = playerScroll.scrollTop;
         dragging = false;
         currentDY = 0;
     }
 
     function onMove(y: number): void {
         const dy = y - startY;
-        // Only drag the sheet when scroll is at top AND we're pulling down
-        if (startScrollTop > 0) return;
-        if (dy < 0) return;
+        if (dy <= 0) return;
         dragging = true;
         currentDY = dy;
         pagePlayer.classList.add('dragging');
@@ -118,10 +114,28 @@ function initSheetGesture(): void {
         currentDY = 0;
     }
 
-    // Touch
+    // Handle bar — always draggable regardless of scroll position
     playerHandleArea.addEventListener('touchstart', e => onStart(e.touches[0].clientY), { passive: true });
-    playerHandleArea.addEventListener('touchmove',  e => onMove(e.touches[0].clientY),  { passive: true });
-    playerHandleArea.addEventListener('touchend',   () => onEnd());
+    playerHandleArea.addEventListener('touchmove',  e => {
+        e.preventDefault(); // stop scroll propagating through the handle
+        onMove(e.touches[0].clientY);
+    }, { passive: false });
+    playerHandleArea.addEventListener('touchend', () => onEnd());
+
+    // Scroll area — only drag when already at top of scroll
+    playerScroll.addEventListener('touchstart', e => {
+        onStart(e.touches[0].clientY);
+    }, { passive: true });
+
+    playerScroll.addEventListener('touchmove', e => {
+        if (playerScroll.scrollTop > 2) return; // let normal scroll happen
+        const dy = e.touches[0].clientY - startY;
+        if (dy <= 0) return;
+        e.preventDefault(); // prevent scroll, drag sheet instead
+        onMove(e.touches[0].clientY);
+    }, { passive: false });
+
+    playerScroll.addEventListener('touchend', () => onEnd());
 
     // Mouse (desktop)
     playerHandleArea.addEventListener('mousedown', e => {
@@ -131,13 +145,6 @@ function initSheetGesture(): void {
         window.addEventListener('mousemove', onMouseMove);
         window.addEventListener('mouseup', onMouseUp);
     });
-
-    // Scroll-to-top → swipe continues to close
-    playerScroll.addEventListener('scroll', () => {
-        if (playerScroll.scrollTop === 0 && playerOpen) {
-            // already handled by drag
-        }
-    }, { passive: true });
 }
 
 // ── UI sync ───────────────────────────────────────────────
