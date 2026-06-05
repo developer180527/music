@@ -318,7 +318,6 @@ async function initialize(): Promise<void> {
     pRepeatBtn.addEventListener('click', () => {
         repeatOn = !repeatOn;
         pRepeatBtn.classList.toggle('active', repeatOn);
-        player.getAudio().loop = repeatOn;
     });
 
     // Volume
@@ -350,7 +349,10 @@ async function initialize(): Promise<void> {
 
     // Auto-advance
     player.getAudio().addEventListener('ended', () => {
-        if (!repeatOn) {
+        if (repeatOn) {
+            void player.play();   // replay same track from the start
+            setPlayIcons(true);
+        } else {
             player.next();
             syncTrackUI();
         }
@@ -361,3 +363,13 @@ async function initialize(): Promise<void> {
 }
 
 void initialize();
+
+// ── Service Worker registration ───────────────────────────
+
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker
+            .register('/service-worker.js')
+            .catch((err) => console.warn('SW registration failed:', err));
+    });
+}
