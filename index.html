@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#0e0e0e">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Pulse">
+    <meta name="format-detection" content="telephone=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <link rel="apple-touch-icon" href="/icons/icon-192.png">
+    <title>Pulse</title>
+    <link rel="manifest" href="/manifest.json">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@400;500;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.30.0/dist/tabler-icons.min.css">
+</head>
+<body>
+<div id="app">
+
+    <!-- ═══════════════════════════════════════════
+         PAGE 1 — LIBRARY
+    ════════════════════════════════════════════ -->
+    <div id="page-library" class="page page-library">
+
+        <header class="lib-header">
+            <span class="logo">PULSE</span>
+            <label class="add-btn" for="file-picker">
+                <i class="ti ti-plus"></i>
+                <span>Add Music</span>
+            </label>
+            <input id="file-picker" type="file" multiple accept="audio/*">
+        </header>
+
+        <div class="lib-title-row">
+            <h1 class="lib-heading">Library</h1>
+            <span id="track-count" class="lib-count mono">0 tracks</span>
+        </div>
+
+        <div id="library" class="library-list"></div>
+
+        <!-- Empty state -->
+        <div id="empty-state" class="empty-state">
+            <i class="ti ti-music-off"></i>
+            <p>No music yet</p>
+            <p class="empty-sub">Tap "Add Music" to import your files</p>
+        </div>
+
+        <!-- Mini player — shown when a track is playing -->
+        <div id="mini-player" class="mini-player hidden">
+            <div class="mini-art" id="mini-art">
+                <i class="ti ti-music"></i>
+            </div>
+            <div class="mini-info">
+                <span id="mini-title" class="mini-title">—</span>
+                <span id="mini-artist" class="mini-artist">Unknown Artist</span>
+            </div>
+            <div class="mini-controls">
+                <button id="mini-play" class="mini-btn" aria-label="Play/Pause">
+                    <i class="ti ti-player-play" id="mini-play-icon"></i>
+                </button>
+                <button id="mini-next" class="mini-btn" aria-label="Next">
+                    <i class="ti ti-player-skip-forward"></i>
+                </button>
+            </div>
+            <div class="mini-progress-bar" id="mini-progress-bar"></div>
+        </div>
+
+    </div>
+
+    <!-- ═══════════════════════════════════════════
+         PAGE 2 — FULL PLAYER (sheet)
+    ════════════════════════════════════════════ -->
+    <div id="page-player" class="page page-player" aria-hidden="true">
+
+        <!-- Drag handle -->
+        <div class="player-handle-area" id="player-handle-area">
+            <div class="player-handle"></div>
+        </div>
+
+        <div class="player-scroll" id="player-scroll">
+
+            <!-- Cover art -->
+            <div class="player-cover-wrap">
+                <div class="player-cover" id="player-cover">
+                    <i class="ti ti-music player-cover-icon"></i>
+                    <span class="player-cover-label">NO ARTWORK</span>
+                </div>
+            </div>
+
+            <!-- Track meta -->
+            <div class="player-meta">
+                <div class="player-meta-text">
+                    <div id="player-title" class="player-title">No Track</div>
+                    <div id="player-artist" class="player-artist">Unknown Artist</div>
+                </div>
+                <button class="player-more-btn" aria-label="More options">
+                    <i class="ti ti-dots"></i>
+                </button>
+            </div>
+
+            <!-- Progress -->
+            <div class="player-progress-area">
+                <div class="player-progress-track" id="player-progress-track">
+                    <div class="player-progress-fill" id="player-progress-fill">
+                        <div class="player-progress-thumb"></div>
+                    </div>
+                </div>
+                <div class="player-times">
+                    <span id="player-time-cur" class="mono">0:00</span>
+                    <span id="player-time-tot" class="mono">0:00</span>
+                </div>
+            </div>
+
+            <!-- Controls -->
+            <div class="player-controls">
+                <button class="player-ctrl-ghost" id="p-shuffle" aria-label="Shuffle">
+                    <i class="ti ti-arrows-shuffle"></i>
+                </button>
+                <button class="player-ctrl-ghost" id="p-prev" aria-label="Previous">
+                    <i class="ti ti-player-skip-back"></i>
+                </button>
+                <button class="player-ctrl-play" id="p-play" aria-label="Play/Pause">
+                    <i class="ti ti-player-play" id="p-play-icon"></i>
+                </button>
+                <button class="player-ctrl-ghost" id="p-next" aria-label="Next">
+                    <i class="ti ti-player-skip-forward"></i>
+                </button>
+                <button class="player-ctrl-ghost" id="p-repeat" aria-label="Repeat">
+                    <i class="ti ti-repeat"></i>
+                </button>
+            </div>
+
+            <!-- Volume -->
+            <div class="player-volume">
+                <i class="ti ti-volume vol-icon"></i>
+                <input type="range" id="volume-slider" min="0" max="100" value="80" class="vol-slider">
+                <i class="ti ti-volume-3 vol-icon"></i>
+            </div>
+
+        </div>
+    </div>
+
+</div>
+<script type="module" src="/src/app.ts"></script>
+</body>
+</html>
