@@ -174,6 +174,17 @@ function syncTrackUI(): void {
 
     mediaController.update(track);
     mediaController.updatePlaybackState();
+    mediaController.updatePositionState();
+}
+
+// Quick "tap registered" animation on a library row.
+function animateRowTap(row: HTMLElement): void {
+    row.classList.remove('tapped');
+    void row.offsetWidth; // force reflow so the animation restarts on re-tap
+    row.classList.add('tapped');
+    row.addEventListener('animationend', () => row.classList.remove('tapped'), { once: true });
+    // Harmless on iOS (unsupported); gives a subtle buzz on Android.
+    navigator.vibrate?.(8);
 }
 
 function refreshActiveRow(): void {
@@ -198,6 +209,10 @@ function initProgress(): void {
         playerTimeCur.textContent = formatTime(audio.currentTime);
         playerTimeTot.textContent = formatTime(audio.duration);
     });
+
+    // Keep the lock-screen scrubber in sync with playback position/duration.
+    audio.addEventListener('loadedmetadata', () => mediaController.updatePositionState());
+    audio.addEventListener('timeupdate', () => mediaController.updatePositionState());
 
     // Click to seek
     playerProgressTrack.addEventListener('click', (e: MouseEvent) => {
@@ -243,8 +258,13 @@ function renderLibrary(): void {
             <span class="track-row-dur mono">--:--</span>
         `;
 
-        row.addEventListener('click', async () => {
-            await player.play(index);
+        row.addEventListener('click', () => {
+            // Acknowledge the tap and update the UI optimistically — play(index)
+            // sets the current track + src synchronously, so the mini-player,
+            // active row and icons all reflect the new track immediately rather
+            // than waiting for the audio to actually start.
+            animateRowTap(row);
+            player.play(index).catch(() => {});
             syncTrackUI();
         });
 
@@ -273,6 +293,8 @@ async function restoreLibrary(): Promise<void> {
 
 async function initialize(): Promise<void> {
     await musicDb.initialize();
+    // Lock-screen / hardware controls re-render the app via syncTrackUI.
+    mediaController.onAction = syncTrackUI;
     mediaController.initialize();
     await restoreLibrary();
 
@@ -354,19 +376,19 @@ async function initialize(): Promise<void> {
         fileInput.value = '';
     });
 
-    // Auto-advance
+    // Auto-advance (single source of truth for 'ended' — player no longer
+    // advances on its own, which previously double-skipped tracks).
     player.getAudio().addEventListener('ended', () => {
         if (repeatOn) {
+            player.seek(0);
             void player.play();   // replay same track from the start
             setPlayIcons(true);
+            mediaController.updatePlaybackState();
         } else {
             player.next();
             syncTrackUI();
         }
     });
-
-    // Media session
-    mediaController.initialize();
 }
 
 void initialize();

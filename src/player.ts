@@ -14,12 +14,11 @@ export class Player {
 
     constructor() {
         this.audio = new Audio();
-
-        this.audio.addEventListener('ended', () => {
-            this.next();
-            this.onTrackChange?.();
-        });
+        // Keep playing through the lock screen / when the screen is off.
+        this.audio.preload = 'metadata';
     }
+
+    /** Notified whenever the active track changes (next / previous / auto-advance). */
     onTrackChange: (() => void) | null = null;
 
     addTrack(file: File): Track {
