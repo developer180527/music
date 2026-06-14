@@ -35,9 +35,15 @@ const pPrevBtn        = document.getElementById('p-prev')              as HTMLBu
 const pNextBtn        = document.getElementById('p-next')              as HTMLButtonElement;
 const pShuffleBtn     = document.getElementById('p-shuffle')           as HTMLButtonElement;
 const pRepeatBtn      = document.getElementById('p-repeat')            as HTMLButtonElement;
-const volumeSlider    = document.getElementById('volume-slider')       as HTMLInputElement;
 const playerHandleArea = document.getElementById('player-handle-area') as HTMLElement;
 const playerScroll    = document.getElementById('player-scroll')       as HTMLElement;
+
+// Settings
+const settingsBtn        = document.getElementById('settings-btn')         as HTMLButtonElement;
+const settingsClose      = document.getElementById('settings-close')       as HTMLButtonElement;
+const pageSettings       = document.getElementById('page-settings')        as HTMLElement;
+const settingsHandleArea = document.getElementById('settings-handle-area') as HTMLElement;
+const themeGrid          = document.getElementById('theme-grid')           as HTMLElement;
 
 // ── State ─────────────────────────────────────────────────
 
@@ -83,68 +89,109 @@ function closePlayer(): void {
     pagePlayer.setAttribute('aria-hidden', 'true');
 }
 
-// Swipe-down-to-close on the handle + scroll detection
-function initSheetGesture(): void {
+// Swipe-down-to-close — bound ONLY to the handle area at the very top of a
+// sheet. Dragging anywhere else (cover, controls, scroll body) never closes it.
+function initSheetClose(sheet: HTMLElement, handle: HTMLElement, close: () => void): void {
     let startY = 0;
     let dragging = false;
-    let currentDY = 0;
+    let dy = 0;
 
-    function onStart(y: number): void {
+    function start(y: number): void {
         startY = y;
-        dragging = false;
-        currentDY = 0;
-    }
-
-    function onMove(y: number): void {
-        const dy = y - startY;
-        if (dy <= 0) return;
         dragging = true;
-        currentDY = dy;
-        pagePlayer.classList.add('dragging');
-        pagePlayer.style.transform = `translateY(${dy}px)`;
+        dy = 0;
+        sheet.classList.add('dragging');
     }
 
-    function onEnd(): void {
-        pagePlayer.classList.remove('dragging');
-        pagePlayer.style.transform = '';
-        if (dragging && currentDY > 80) {
-            closePlayer();
-        }
+    function move(y: number): void {
+        if (!dragging) return;
+        dy = Math.max(0, y - startY);
+        sheet.style.transform = `translateY(${dy}px)`;
+    }
+
+    function end(): void {
+        if (!dragging) return;
         dragging = false;
-        currentDY = 0;
+        sheet.classList.remove('dragging');
+        sheet.style.transform = '';
+        if (dy > 80) close();
+        dy = 0;
     }
 
-    // Handle bar — always draggable regardless of scroll position
-    playerHandleArea.addEventListener('touchstart', e => onStart(e.touches[0].clientY), { passive: true });
-    playerHandleArea.addEventListener('touchmove',  e => {
-        e.preventDefault(); // stop scroll propagating through the handle
-        onMove(e.touches[0].clientY);
-    }, { passive: false });
-    playerHandleArea.addEventListener('touchend', () => onEnd());
-
-    // Scroll area — only drag when already at top of scroll
-    playerScroll.addEventListener('touchstart', e => {
-        onStart(e.touches[0].clientY);
-    }, { passive: true });
-
-    playerScroll.addEventListener('touchmove', e => {
-        if (playerScroll.scrollTop > 2) return; // let normal scroll happen
-        const dy = e.touches[0].clientY - startY;
-        if (dy <= 0) return;
-        e.preventDefault(); // prevent scroll, drag sheet instead
-        onMove(e.touches[0].clientY);
-    }, { passive: false });
-
-    playerScroll.addEventListener('touchend', () => onEnd());
+    handle.addEventListener('touchstart', e => start(e.touches[0].clientY), { passive: true });
+    handle.addEventListener('touchmove',  e => { e.preventDefault(); move(e.touches[0].clientY); }, { passive: false });
+    handle.addEventListener('touchend', end);
+    handle.addEventListener('touchcancel', end);
 
     // Mouse (desktop)
-    playerHandleArea.addEventListener('mousedown', e => {
-        onStart(e.clientY);
-        const onMouseMove = (ev: MouseEvent) => onMove(ev.clientY);
-        const onMouseUp   = () => { onEnd(); window.removeEventListener('mousemove', onMouseMove); window.removeEventListener('mouseup', onMouseUp); };
-        window.addEventListener('mousemove', onMouseMove);
-        window.addEventListener('mouseup', onMouseUp);
+    handle.addEventListener('mousedown', e => {
+        start(e.clientY);
+        const mm = (ev: MouseEvent) => move(ev.clientY);
+        const mu = () => { end(); window.removeEventListener('mousemove', mm); window.removeEventListener('mouseup', mu); };
+        window.addEventListener('mousemove', mm);
+        window.addEventListener('mouseup', mu);
     });
+}
+
+// ── Settings sheet ────────────────────────────────────────
+
+function openSettings(): void {
+    pageSettings.classList.add('open');
+    pageSettings.setAttribute('aria-hidden', 'false');
+}
+
+function closeSettings(): void {
+    pageSettings.classList.remove('open');
+    pageSettings.setAttribute('aria-hidden', 'true');
+}
+
+// ── Themes ────────────────────────────────────────────────
+
+interface Theme { id: string; name: string; bg: string; accent: string; }
+
+const THEMES: Theme[] = [
+    { id: 'onyx',    name: 'Onyx',    bg: '#0e0e0e', accent: '#f0f0f0' },
+    { id: 'indigo',  name: 'Indigo',  bg: '#0d0e14', accent: '#7c83ff' },
+    { id: 'emerald', name: 'Emerald', bg: '#0a0f0d', accent: '#34d399' },
+    { id: 'rose',    name: 'Rose',    bg: '#120c0e', accent: '#fb7185' },
+    { id: 'light',   name: 'Light',   bg: '#f5f5f7', accent: '#1a1a22' },
+];
+const THEME_KEY = 'pulse-theme';
+
+function applyTheme(id: string): void {
+    const theme = THEMES.find(t => t.id === id) ?? THEMES[0];
+    document.documentElement.setAttribute('data-theme', theme.id);
+    try { localStorage.setItem(THEME_KEY, theme.id); } catch { /* private mode */ }
+
+    // Keep the browser/PWA chrome colour in step with the palette.
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute('content', theme.bg);
+
+    themeGrid.querySelectorAll<HTMLElement>('.theme-card').forEach(card => {
+        card.classList.toggle('selected', card.dataset.theme === theme.id);
+    });
+}
+
+function renderThemes(): void {
+    let current = 'onyx';
+    try { current = localStorage.getItem(THEME_KEY) || 'onyx'; } catch { /* private mode */ }
+
+    themeGrid.innerHTML = THEMES.map(t => `
+        <button class="theme-card${t.id === current ? ' selected' : ''}" data-theme="${t.id}">
+            <span class="theme-swatch" style="background:${t.bg}">
+                <span class="theme-dot" style="background:${t.accent}"></span>
+            </span>
+            <span class="theme-name">${t.name}</span>
+            <i class="ti ti-check theme-check"></i>
+        </button>
+    `).join('');
+
+    themeGrid.querySelectorAll<HTMLElement>('.theme-card').forEach(card => {
+        card.addEventListener('click', () => applyTheme(card.dataset.theme || 'onyx'));
+    });
+
+    // Sync data-theme + meta colour with whatever was restored on load.
+    applyTheme(current);
 }
 
 // ── UI sync ───────────────────────────────────────────────
@@ -201,26 +248,79 @@ function refreshActiveRow(): void {
 
 function initProgress(): void {
     const audio = player.getAudio();
+    let rafId = 0;
+    let scrubbing = false;
 
-    audio.addEventListener('timeupdate', () => {
-        const pct = audio.duration > 0 ? (audio.currentTime / audio.duration) * 100 : 0;
+    function paint(): void {
+        const d = audio.duration;
+        const pct = d > 0 ? (audio.currentTime / d) * 100 : 0;
         playerProgressFill.style.width = pct + '%';
         miniProgressBar.style.width = pct + '%';
         playerTimeCur.textContent = formatTime(audio.currentTime);
-        playerTimeTot.textContent = formatTime(audio.duration);
+        playerTimeTot.textContent = formatTime(d);
+    }
+
+    // Animation-frame loop: paints the fill every frame while playing so the
+    // bar glides smoothly instead of jumping on each 'timeupdate' (~4/sec).
+    function loop(): void {
+        rafId = 0;
+        if (!scrubbing) paint();
+        if (player.isPlaying() && !scrubbing) rafId = requestAnimationFrame(loop);
+    }
+    function startLoop(): void { if (!rafId) rafId = requestAnimationFrame(loop); }
+    function stopLoop(): void { if (rafId) { cancelAnimationFrame(rafId); rafId = 0; } }
+
+    audio.addEventListener('play', startLoop);
+    audio.addEventListener('playing', startLoop);
+    audio.addEventListener('pause', () => { stopLoop(); paint(); });
+    audio.addEventListener('ended', stopLoop);
+    audio.addEventListener('loadedmetadata', () => { paint(); mediaController.updatePositionState(); });
+    audio.addEventListener('timeupdate', () => {
+        if (!player.isPlaying() && !scrubbing) paint();   // stay in sync while paused
+        mediaController.updatePositionState();              // feed the lock-screen scrubber
     });
 
-    // Keep the lock-screen scrubber in sync with playback position/duration.
-    audio.addEventListener('loadedmetadata', () => mediaController.updatePositionState());
-    audio.addEventListener('timeupdate', () => mediaController.updatePositionState());
-
-    // Click to seek
-    playerProgressTrack.addEventListener('click', (e: MouseEvent) => {
+    // ── Scrubbing: pointer events cover mouse + touch with one code path ──
+    function ratioFromX(clientX: number): number {
         const rect = playerProgressTrack.getBoundingClientRect();
-        const ratio = (e.clientX - rect.left) / rect.width;
-        const audio = player.getAudio();
-        if (isFinite(audio.duration)) player.seek(ratio * audio.duration);
+        return Math.min(1, Math.max(0, (clientX - rect.left) / rect.width));
+    }
+
+    function previewAt(ratio: number): void {
+        const pct = ratio * 100;
+        playerProgressFill.style.width = pct + '%';
+        miniProgressBar.style.width = pct + '%';
+        const d = audio.duration;
+        if (isFinite(d) && d > 0) playerTimeCur.textContent = formatTime(ratio * d);
+    }
+
+    playerProgressTrack.addEventListener('pointerdown', (e: PointerEvent) => {
+        scrubbing = true;
+        stopLoop();
+        playerProgressTrack.classList.add('scrubbing');
+        try { playerProgressTrack.setPointerCapture(e.pointerId); } catch { /* not capturable */ }
+        previewAt(ratioFromX(e.clientX));
     });
+
+    playerProgressTrack.addEventListener('pointermove', (e: PointerEvent) => {
+        if (scrubbing) previewAt(ratioFromX(e.clientX));
+    });
+
+    function endScrub(e: PointerEvent): void {
+        if (!scrubbing) return;
+        scrubbing = false;
+        playerProgressTrack.classList.remove('scrubbing');
+        const d = audio.duration;
+        if (isFinite(d) && d > 0) {
+            player.seek(ratioFromX(e.clientX) * d);   // commit the seek (also handles taps)
+            mediaController.updatePositionState();
+        }
+        paint();
+        if (player.isPlaying()) startLoop();
+    }
+
+    playerProgressTrack.addEventListener('pointerup', endScrub);
+    playerProgressTrack.addEventListener('pointercancel', endScrub);
 }
 
 // ── Library render ────────────────────────────────────────
@@ -299,7 +399,13 @@ async function initialize(): Promise<void> {
     await restoreLibrary();
 
     initProgress();
-    initSheetGesture();
+    initSheetClose(pagePlayer, playerHandleArea, closePlayer);
+    initSheetClose(pageSettings, settingsHandleArea, closeSettings);
+    renderThemes();
+
+    // ── Settings sheet open/close
+    settingsBtn.addEventListener('click', openSettings);
+    settingsClose.addEventListener('click', closeSettings);
 
     // ── Mini player → open full player
     miniPlayer.addEventListener('click', (e: MouseEvent) => {
@@ -349,11 +455,8 @@ async function initialize(): Promise<void> {
         pRepeatBtn.classList.toggle('active', repeatOn);
     });
 
-    // Volume
-    player.setVolume(0.8);
-    volumeSlider.addEventListener('input', () => {
-        player.setVolume(Number(volumeSlider.value) / 100);
-    });
+    // Volume is governed by the device now that the in-app slider is gone.
+    player.setVolume(1);
 
     // File picker
     fileInput.addEventListener('change', async () => {

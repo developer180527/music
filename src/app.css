@@ -14,6 +14,38 @@
     color-scheme: dark;
 }
 
+/* ── Themes ─────────────────────────────────────────────────
+   :root above is the default "Onyx". Each palette overrides the
+   core tokens; --accent drives the play button + progress bars. */
+
+[data-theme="indigo"] {
+    --bg: #0d0e14; --surface: #161822; --surface-2: #1f2230; --surface-3: #2a2e40;
+    --border: rgba(255,255,255,0.07); --border-2: rgba(255,255,255,0.13);
+    --text: #eef0f7; --text-2: #8b90a5; --text-3: #4a4f63; --accent: #7c83ff;
+    color-scheme: dark;
+}
+
+[data-theme="emerald"] {
+    --bg: #0a0f0d; --surface: #121a17; --surface-2: #1a2420; --surface-3: #24322c;
+    --border: rgba(255,255,255,0.07); --border-2: rgba(255,255,255,0.13);
+    --text: #eaf2ee; --text-2: #84a094; --text-3: #46584f; --accent: #34d399;
+    color-scheme: dark;
+}
+
+[data-theme="rose"] {
+    --bg: #120c0e; --surface: #1d1417; --surface-2: #281a1f; --surface-3: #34232a;
+    --border: rgba(255,255,255,0.07); --border-2: rgba(255,255,255,0.13);
+    --text: #f6ecef; --text-2: #a78a92; --text-3: #5b454c; --accent: #fb7185;
+    color-scheme: dark;
+}
+
+[data-theme="light"] {
+    --bg: #f5f5f7; --surface: #ffffff; --surface-2: #ececef; --surface-3: #dcdce1;
+    --border: rgba(0,0,0,0.08); --border-2: rgba(0,0,0,0.14);
+    --text: #14141a; --text-2: #6b6b75; --text-3: #a0a0aa; --accent: #1a1a22;
+    color-scheme: light;
+}
+
 *, *::before, *::after {
     box-sizing: border-box;
     margin: 0; padding: 0;
@@ -97,6 +129,28 @@ input  { font: inherit; }
 .add-btn:hover { background: var(--surface-2); color: var(--text); }
 .add-btn i { font-size: 14px; }
 #file-picker { display: none; }
+
+.lib-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Round icon-only button (settings, close, etc.) */
+.icon-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    color: var(--text-2);
+    border: 1px solid var(--border-2);
+    transition: background 0.15s, color 0.15s, transform 0.1s;
+}
+.icon-btn:hover  { background: var(--surface-2); color: var(--text); }
+.icon-btn:active { transform: scale(0.92); }
 
 .lib-title-row {
     display: flex;
@@ -383,10 +437,9 @@ input  { font: inherit; }
     position: absolute;
     bottom: 0; left: 0;
     height: 2px;
-    background: var(--text-2);
+    background: var(--accent);
     border-radius: 0 0 0 16px;
     width: 0%;
-    transition: width 0.5s linear;
     pointer-events: none;
 }
 
@@ -414,10 +467,11 @@ input  { font: inherit; }
     transition: none;
 }
 
-/* Handle */
+/* Handle — the only zone that closes the sheet on swipe-down */
 
-.player-handle-area {
-    padding: 12px 0 6px;
+.player-handle-area,
+.sheet-handle-area {
+    padding: 18px 0 14px;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -427,16 +481,17 @@ input  { font: inherit; }
 }
 
 .player-handle {
-    width: 36px;
-    height: 4px;
+    width: 38px;
+    height: 5px;
     border-radius: 99px;
     background: var(--surface-3);
 }
 
-/* Scroll container */
+/* Content container — vertically centered so the player isn't crammed up top */
 
 .player-scroll {
     flex: 1;
+    min-height: 0;
     overflow-y: auto;
     overflow-x: hidden;
     overscroll-behavior: none;
@@ -444,6 +499,7 @@ input  { font: inherit; }
     padding: 8px 24px max(32px, env(safe-area-inset-bottom)) 24px;
     display: flex;
     flex-direction: column;
+    justify-content: center;
     gap: 0;
 }
 
@@ -538,35 +594,48 @@ input  { font: inherit; }
 
 .player-progress-track {
     width: 100%;
-    height: 4px;
+    height: 6px;
     background: var(--surface-3);
     border-radius: 99px;
     cursor: pointer;
     position: relative;
-    margin-bottom: 10px;
+    margin-bottom: 12px;
+    touch-action: none;   /* drag is handled in JS, don't let the browser pan */
+}
+
+/* Invisible enlarged hit area so the thin bar is easy to grab and scrub */
+.player-progress-track::before {
+    content: '';
+    position: absolute;
+    left: 0; right: 0;
+    top: -14px; bottom: -14px;
 }
 
 .player-progress-fill {
     height: 100%;
     width: 0%;
-    background: var(--text);
+    background: var(--accent);
     border-radius: 99px;
     position: relative;
-    transition: width 0.5s linear;
+    /* Width is updated every animation frame in JS — no CSS transition,
+       which is what makes playback + scrubbing feel smooth instead of steppy. */
 }
 
 .player-progress-thumb {
     width: 14px; height: 14px;
     border-radius: 50%;
-    background: var(--text);
+    background: var(--accent);
     position: absolute;
     right: -7px; top: 50%;
     transform: translateY(-50%);
-    opacity: 0;
-    transition: opacity 0.15s;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+    transition: transform 0.12s ease;
 }
 
-.player-progress-track:hover .player-progress-thumb { opacity: 1; }
+.player-progress-track:hover .player-progress-thumb,
+.player-progress-track.scrubbing .player-progress-thumb {
+    transform: translateY(-50%) scale(1.4);
+}
 
 .player-times {
     display: flex;
@@ -582,7 +651,7 @@ input  { font: inherit; }
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 28px;
+    margin-bottom: 4px;
 }
 
 .player-ctrl-ghost {
@@ -597,9 +666,9 @@ input  { font: inherit; }
 .player-ctrl-ghost.active { color: var(--text); }
 
 .player-ctrl-play {
-    width: 60px; height: 60px;
+    width: 64px; height: 64px;
     border-radius: 50%;
-    background: var(--text);
+    background: var(--accent);
     color: var(--bg);
     display: flex; align-items: center; justify-content: center;
     font-size: 24px;
@@ -608,29 +677,116 @@ input  { font: inherit; }
 .player-ctrl-play:hover  { opacity: 0.88; }
 .player-ctrl-play:active { transform: scale(0.94); }
 
-/* Volume */
+/* ══════════════════════════════════════
+   PAGE 3 — SETTINGS SHEET
+══════════════════════════════════════ */
 
-.player-volume {
+.page-settings {
+    z-index: 30;
+    background: var(--surface);
+    border-radius: var(--sheet-radius) var(--sheet-radius) 0 0;
+    display: flex;
+    flex-direction: column;
+    transform: translateY(100%);
+    transition: transform 0.42s cubic-bezier(0.32, 0.72, 0, 1);
+    will-change: transform;
+    top: max(12px, env(safe-area-inset-top));
+}
+
+.page-settings.open { transform: translateY(0); }
+.page-settings.dragging { transition: none; }
+
+.settings-body {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    overscroll-behavior: none;
+    padding: 4px 24px max(32px, env(safe-area-inset-bottom)) 24px;
+}
+.settings-body::-webkit-scrollbar { display: none; }
+
+.settings-head {
     display: flex;
     align-items: center;
-    gap: 10px;
+    justify-content: space-between;
+    margin-bottom: 28px;
 }
 
-.vol-icon { font-size: 16px; color: var(--text-3); pointer-events: none; }
-
-.vol-slider {
-    flex: 1; height: 4px;
-    -webkit-appearance: none; appearance: none;
-    background: var(--surface-3);
-    border-radius: 99px;
-    outline: none; cursor: pointer;
+.settings-title {
+    font-size: 24px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    color: var(--text);
 }
-.vol-slider::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    width: 14px; height: 14px;
+
+.settings-section { margin-bottom: 28px; }
+
+.settings-label {
+    display: block;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--text-3);
+    margin-bottom: 14px;
+}
+
+.theme-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+}
+
+.theme-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    border-radius: 14px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    text-align: left;
+    transition: border-color 0.15s, transform 0.1s;
+    position: relative;
+}
+.theme-card:active { transform: scale(0.97); }
+.theme-card.selected { border-color: var(--accent); }
+
+.theme-swatch {
+    width: 30px; height: 30px;
     border-radius: 50%;
-    background: var(--text-2);
-    cursor: pointer;
-    transition: background 0.12s;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--border-2);
 }
-.vol-slider:hover::-webkit-slider-thumb { background: var(--text); }
+
+.theme-dot {
+    width: 11px; height: 11px;
+    border-radius: 50%;
+}
+
+.theme-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+    flex: 1;
+}
+
+.theme-check {
+    font-size: 16px;
+    color: var(--accent);
+    opacity: 0;
+    transition: opacity 0.15s;
+}
+.theme-card.selected .theme-check { opacity: 1; }
+
+.settings-foot {
+    font-size: 12px;
+    color: var(--text-3);
+    text-align: center;
+    margin-top: 8px;
+}
+.settings-foot .mono { letter-spacing: 0.1em; }

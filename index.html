@@ -4,6 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="theme-color" content="#0e0e0e">
+    <!-- Apply the saved theme before first paint to avoid a flash -->
+    <script>
+        try {
+            var t = localStorage.getItem('pulse-theme');
+            if (t) document.documentElement.setAttribute('data-theme', t);
+        } catch (e) {}
+    </script>
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black">
     <meta name="apple-mobile-web-app-title" content="Pulse">
@@ -27,11 +34,17 @@
 
         <header class="lib-header">
             <span class="logo">PULSE</span>
-            <label class="add-btn" for="file-picker">
-                <i class="ti ti-plus"></i>
-                <span>Add Music</span>
-            </label>
-            <input id="file-picker" type="file" multiple accept="audio/*">
+            <div class="lib-header-actions">
+                <button id="settings-btn" class="icon-btn" aria-label="Settings">
+                    <i class="ti ti-settings"></i>
+                </button>
+                <label class="add-btn" for="file-picker">
+                    <i class="ti ti-plus"></i>
+                    <span>Add Music</span>
+                </label>
+            </div>
+            <input id="file-picker" type="file" multiple
+                   accept="audio/*,.mp3,.m4a,.m4b,.aac,.wav,.flac,.ogg,.oga,.opus,.weba,.mp4">
         </header>
 
         <div class="lib-title-row">
@@ -133,13 +146,34 @@
                 </button>
             </div>
 
-            <!-- Volume -->
-            <div class="player-volume">
-                <i class="ti ti-volume vol-icon"></i>
-                <input type="range" id="volume-slider" min="0" max="100" value="80" class="vol-slider">
-                <i class="ti ti-volume-3 vol-icon"></i>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════
+         PAGE 3 — SETTINGS (sheet)
+    ════════════════════════════════════════════ -->
+    <div id="page-settings" class="page page-settings" aria-hidden="true">
+
+        <div class="sheet-handle-area" id="settings-handle-area">
+            <div class="player-handle"></div>
+        </div>
+
+        <div class="settings-body">
+            <div class="settings-head">
+                <h2 class="settings-title">Settings</h2>
+                <button id="settings-close" class="icon-btn" aria-label="Close settings">
+                    <i class="ti ti-x"></i>
+                </button>
             </div>
 
+            <div class="settings-section">
+                <span class="settings-label">Theme</span>
+                <div id="theme-grid" class="theme-grid"></div>
+            </div>
+
+            <div class="settings-foot">
+                <span class="mono">PULSE</span> — offline, local-only.
+            </div>
         </div>
     </div>
 

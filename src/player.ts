@@ -14,8 +14,24 @@ export class Player {
 
     constructor() {
         this.audio = new Audio();
-        // Keep playing through the lock screen / when the screen is off.
         this.audio.preload = 'metadata';
+        // `playsinline` + keeping the element attached to the DOM lets iOS hold
+        // on to the audio session across lock/unlock. A detached `new Audio()`
+        // can get its output torn down while backgrounded, which shows up as
+        // "the progress bar moves but no sound comes out" after a lock-screen
+        // pause→play. Staying in the DOM keeps the pipeline alive.
+        this.audio.setAttribute('playsinline', '');
+        this.attachToDom();
+    }
+
+    private attachToDom(): void {
+        if (typeof document === 'undefined') return;
+        const attach = (): void => {
+            this.audio.style.display = 'none';
+            document.body.appendChild(this.audio);
+        };
+        if (document.body) attach();
+        else document.addEventListener('DOMContentLoaded', attach, { once: true });
     }
 
     /** Notified whenever the active track changes (next / previous / auto-advance). */
@@ -54,6 +70,8 @@ export class Player {
             this.audio.src = this.tracks[index].url;
         }
 
+        // iOS can leave the element muted/ducked after a background pause.
+        this.audio.muted = false;
         return this.audio.play();
     }
 
