@@ -88,41 +88,65 @@ input  { font: inherit; }
 ══════════════════════════════════════ */
 
 .page-library {
-    display: flex;
-    flex-direction: column;
     overflow: hidden;
     background: var(--bg);
     z-index: 1;
 }
 
-/* Header */
+/* Header — a compact frosted strip floating over the scrolling list */
 
 .lib-header {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    z-index: 5;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: max(20px, env(safe-area-inset-top)) 20px 0;
-    flex-shrink: 0;
+    gap: 12px;
+    padding: calc(env(safe-area-inset-top) + 12px) 18px 12px;
+
+    /* Glass: tracks blur through as they scroll underneath.
+       Falls back to a solid strip where color-mix isn't supported. */
+    background: var(--bg);
+    background: color-mix(in srgb, var(--bg) 60%, transparent);
+    -webkit-backdrop-filter: blur(20px) saturate(1.5);
+    backdrop-filter: blur(20px) saturate(1.5);
+    border-bottom: 1px solid var(--border);
 }
 
-.logo {
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.22em;
-    color: var(--text-3);
+/* Soft fade just below the strip so rows melt into the glass edge */
+.lib-header::after {
+    content: '';
+    position: absolute;
+    left: 0; right: 0; top: 100%;
+    height: 18px;
+    background: linear-gradient(var(--bg), transparent);
+    opacity: 0.5;
+    pointer-events: none;
+}
+
+.lib-header-title {
+    display: flex;
+    align-items: baseline;
+    gap: 9px;
+    min-width: 0;
+    flex: 1;
+    overflow: hidden;
 }
 
 .add-btn {
     display: flex;
     align-items: center;
     gap: 5px;
-    padding: 7px 14px;
+    padding: 8px 13px;
     border-radius: 99px;
     border: 1px solid var(--border-2);
     font-size: 12px;
     font-weight: 500;
     color: var(--text-2);
     cursor: pointer;
+    white-space: nowrap;
+    flex-shrink: 0;
     font-family: 'Syne', sans-serif;
     transition: background 0.15s, color 0.15s;
 }
@@ -134,6 +158,7 @@ input  { font: inherit; }
     display: flex;
     align-items: center;
     gap: 8px;
+    flex-shrink: 0;
 }
 
 /* Round icon-only button (settings, close, etc.) */
@@ -152,36 +177,37 @@ input  { font: inherit; }
 .icon-btn:hover  { background: var(--surface-2); color: var(--text); }
 .icon-btn:active { transform: scale(0.92); }
 
-.lib-title-row {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    padding: 22px 20px 12px;
-    flex-shrink: 0;
-}
-
 .lib-heading {
-    font-size: 26px;
+    font-size: 22px;
     font-weight: 800;
     letter-spacing: -0.02em;
     color: var(--text);
+    white-space: nowrap;
+    flex-shrink: 0;
 }
 
 .lib-count {
     font-size: 11px;
     color: var(--text-3);
+    flex-shrink: 0;
+}
+
+/* On very narrow phones, drop the count rather than clipping it */
+@media (max-width: 384px) {
+    .lib-count { display: none; }
 }
 
 /* Track list */
 
 .library-list {
-    flex: 1;
+    position: absolute;
+    inset: 0;
     overflow-y: auto;
     overflow-x: hidden;
     overscroll-behavior: none;
-    padding: 0 12px;
-    padding-bottom: calc(var(--mini-h) + 16px + env(safe-area-inset-bottom));
-
+    /* top clears the floating glass header; bottom clears the mini-player */
+    padding: calc(env(safe-area-inset-top) + 70px) 12px
+             calc(var(--mini-h) + 16px + env(safe-area-inset-bottom)) 12px;
 }
 
 .library-list::-webkit-scrollbar { display: none; }
@@ -349,7 +375,6 @@ input  { font: inherit; }
     left: 12px;
     right: 12px;
     height: var(--mini-h);
-    background: #2a2a2a;
     border-radius: 16px;
     display: flex;
     align-items: center;
@@ -360,6 +385,14 @@ input  { font: inherit; }
     transition: transform 0.35s cubic-bezier(0.34,1.56,0.64,1), opacity 0.25s;
     overflow: hidden;
     border: 1px solid var(--border-2);
+
+    /* Theme-aware frosted glass — blurs the tracks scrolling behind it.
+       Falls back to a solid surface where color-mix isn't supported. */
+    background: var(--surface-3);
+    background: color-mix(in srgb, var(--surface-3) 72%, transparent);
+    -webkit-backdrop-filter: blur(24px) saturate(1.6);
+    backdrop-filter: blur(24px) saturate(1.6);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.28);
 }
 
 .mini-player.hidden {

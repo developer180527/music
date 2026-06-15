@@ -33,7 +33,10 @@
     <div id="page-library" class="page page-library">
 
         <header class="lib-header">
-            <span class="logo">PULSE</span>
+            <div class="lib-header-title">
+                <h1 class="lib-heading">Library</h1>
+                <span id="track-count" class="lib-count mono">0 tracks</span>
+            </div>
             <div class="lib-header-actions">
                 <button id="settings-btn" class="icon-btn" aria-label="Settings">
                     <i class="ti ti-settings"></i>
@@ -46,11 +49,6 @@
             <input id="file-picker" type="file" multiple
                    accept="audio/*,.mp3,.m4a,.m4b,.aac,.wav,.flac,.ogg,.oga,.opus,.weba,.mp4">
         </header>
-
-        <div class="lib-title-row">
-            <h1 class="lib-heading">Library</h1>
-            <span id="track-count" class="lib-count mono">0 tracks</span>
-        </div>
 
         <div id="library" class="library-list"></div>
 
