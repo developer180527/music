@@ -498,7 +498,9 @@ void initialize();
 
 // ── Service Worker registration ───────────────────────────
 
-if ('serviceWorker' in navigator) {
+// Only register in production builds — in dev the cache-first SW would serve
+// a stale shell and fight Vite's HMR.
+if (import.meta.env.PROD && 'serviceWorker' in navigator) {
     window.addEventListener('load', () => {
         navigator.serviceWorker
             .register('/service-worker.js')

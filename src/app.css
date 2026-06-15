@@ -386,13 +386,15 @@ input  { font: inherit; }
     overflow: hidden;
     border: 1px solid var(--border-2);
 
-    /* Theme-aware frosted glass — blurs the tracks scrolling behind it.
-       Falls back to a solid surface where color-mix isn't supported. */
+    /* Always frosted glass — on light, dark, or any theme. A low-opacity
+       theme tint + strong blur keeps the tracks behind always showing
+       through. Falls back to a solid surface where color-mix is unsupported. */
     background: var(--surface-3);
-    background: color-mix(in srgb, var(--surface-3) 72%, transparent);
-    -webkit-backdrop-filter: blur(24px) saturate(1.6);
-    backdrop-filter: blur(24px) saturate(1.6);
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.28);
+    background: color-mix(in srgb, var(--surface-3) 55%, transparent);
+    -webkit-backdrop-filter: blur(30px) saturate(1.8);
+    backdrop-filter: blur(30px) saturate(1.8);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.28),
+                inset 0 1px 0 rgba(255, 255, 255, 0.15);
 }
 
 .mini-player.hidden {
