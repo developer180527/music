@@ -1,15 +1,20 @@
 // ── Pulse service worker — offline-first PWA shell ──────────
 // Bump CACHE_VERSION on every deploy: it invalidates the old caches and
 // forces the shell to be re-precached.
-const CACHE_VERSION = 'v3';
+const CACHE_VERSION = 'v4';
 const SHELL_CACHE   = `pulse-shell-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `pulse-runtime-${CACHE_VERSION}`;
 
 // Everything needed to boot the UI with zero network. Vite emits stable
 // (unhashed) filenames, so these paths are deterministic.
+//
+// NOTE: we deliberately do NOT precache '/index.html'. On Cloudflare Pages
+// '/index.html' answers with a 308 redirect to '/', so caching it stores a
+// "redirected" response — and iOS Safari refuses to satisfy a navigation with
+// a redirected response ("Response served by service worker has redirections").
+// '/' serves the same HTML with a clean 200, so that's our shell entry.
 const SHELL_ASSETS = [
     '/',
-    '/index.html',
     '/manifest.json',
     '/icons/icon.png',
     '/assets/index.js',
@@ -27,12 +32,17 @@ const CACHEABLE_HOSTS = [
 self.addEventListener('install', (event) => {
     event.waitUntil(
         caches.open(SHELL_CACHE)
-            // Add individually with { cache: 'reload' } so we precache fresh
-            // copies and a single failure can't abort the whole install.
+            // Fetch fresh + store a redirect-free copy. Done per-item so a
+            // single failure can't abort the whole precache.
             .then((cache) => Promise.all(
-                SHELL_ASSETS.map((url) =>
-                    cache.add(new Request(url, { cache: 'reload' })).catch(() => {})
-                )
+                SHELL_ASSETS.map(async (url) => {
+                    try {
+                        const res = await fetch(new Request(url, { cache: 'reload' }));
+                        if (res && (res.ok || res.type === 'opaque')) {
+                            await cache.put(url, await stripRedirect(res));
+                        }
+                    } catch { /* offline at install time */ }
+                })
             ))
             .then(() => self.skipWaiting())
     );
@@ -64,22 +74,10 @@ self.addEventListener('fetch', (event) => {
     if (url.protocol === 'blob:') return;
 
     // Page navigations → network-first: an online user always gets the latest
-    // shell; offline falls back to the precached shell. This is what makes the
-    // installed app open with no connection.
+    // shell; offline falls back to the cached shell. Always redirect-free so
+    // iOS Safari accepts the response.
     if (request.mode === 'navigate') {
-        event.respondWith(
-            fetch(request)
-                .then((res) => {
-                    const copy = res.clone();
-                    caches.open(SHELL_CACHE).then((c) => c.put('/index.html', copy));
-                    return res;
-                })
-                .catch(async () =>
-                    (await caches.match('/index.html')) ||
-                    (await caches.match('/')) ||
-                    Response.error()
-                )
-        );
+        event.respondWith(handleNavigate(request));
         return;
     }
 
@@ -101,6 +99,20 @@ self.addEventListener('fetch', (event) => {
     );
 });
 
+// Navigation handler: try the network, cache a clean copy under '/', and fall
+// back to the cached shell offline. Every returned response is redirect-free.
+async function handleNavigate(request) {
+    try {
+        const res = await stripRedirect(await fetch(request));
+        const copy = res.clone();
+        caches.open(SHELL_CACHE).then((c) => c.put('/', copy)).catch(() => {});
+        return res;
+    } catch {
+        const cached = (await caches.match('/')) || (await caches.match('/index.html'));
+        return cached ? stripRedirect(cached) : Response.error();
+    }
+}
+
 // Cache-first: serve from cache, otherwise fetch and store. Caches both normal
 // (same-origin / CORS) and opaque (no-cors stylesheet/font) responses so the
 // CDN-hosted fonts and icon glyphs are available with no network.
@@ -119,4 +131,22 @@ async function cacheFirst(request, cacheName) {
         // Offline and nothing cached for this request.
         return Response.error();
     }
+}
+
+// iOS Safari rejects a redirected response for a navigation. Rebuild the
+// response so `redirected` is false. Drops content-encoding/length since the
+// body is already decoded once read.
+async function stripRedirect(response) {
+    if (!response || !response.redirected) return response;
+
+    const body = await response.clone().blob();
+    const headers = new Headers(response.headers);
+    headers.delete('content-encoding');
+    headers.delete('content-length');
+
+    return new Response(body, {
+        status: response.status === 0 ? 200 : response.status,
+        statusText: response.statusText,
+        headers,
+    });
 }
